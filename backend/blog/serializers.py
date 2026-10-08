@@ -43,4 +43,22 @@ class PostSerializer(serializers.ModelSerializer):
 
     def get_likes_count(self, obj):
         return obj.likes.count()
+
+# RegisterSerializer is used to handle user registration. It ensures that the password is only written and never sent back to the frontend.
+class RegisterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('username', 'password', 'email')
+        # write_only ensures the password is never sent back to the frontend in a response
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def create(self, validated_data):
+        # create_user automatically hashes the password for us
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data.get('email', ''),
+            password=validated_data['password']
+        )
+        return user
+
     

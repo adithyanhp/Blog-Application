@@ -5,7 +5,9 @@
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import UserViewSet, PostViewSet, CommentViewSet, LikeViewSet
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from .views import UserViewSet, PostViewSet, CommentViewSet, LikeViewSet, RegisterView
+
 
 # DefaultRouter automatically generates RESTful URL patterns for our ViewSets.
 router = DefaultRouter()
@@ -28,4 +30,14 @@ urlpatterns = [
     # The empty string '' here means all router URLs will be prefixed with 'api/'
     # as defined in this list. 
     path('api/', include(router.urls)),
+
+    # 1. Registration endpoint (Creates the user)
+    path('api/register/', RegisterView.as_view(), name='auth_register'),
+    
+    # 2. Login endpoint (Returns the JWT when given a valid username/password)
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'), 
+    
+    # 3. Refresh endpoint (Renews the token before it expires)
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
 ]

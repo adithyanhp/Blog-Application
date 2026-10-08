@@ -2,15 +2,18 @@
 
 #views.py is the file where we define the logic for our API endpoints. It handles incoming requests, interacts with the database through models, and returns responses in JSON format using serializers.
 
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, generics, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from .models import Post, Comment, Like
-from .serializers import UserSerializer, PostSerializer, CommentSerializer, LikeSerializer
+from .serializers import UserSerializer, PostSerializer, CommentSerializer, LikeSerializer, RegisterSerializer
+from rest_framework.permissions import AllowAny
+
 
 User = get_user_model()
 
+#user viewset to handle user-related operations. It allows for CRUD operations on users and includes a custom endpoint to fetch or update the logged-in user's profile.
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -51,10 +54,34 @@ class CommentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
+
+# LikeViewSet handles the "like" functionality for posts. It allows users to like or unlike a post. The create method is overridden to implement a toggle effect: if the user has already liked the post, it will remove the like; otherwise, it will add a new like.
 class LikeViewSet(viewsets.ModelViewSet):
     queryset = Like.objects.all()
     serializer_class = LikeSerializer
 
+    # NEW: Override the creation process to create a toggle effect
+    def create(self, request, *args, **kwargs):
+        post_id = request.data.get('post')
+        
+        # Check if this exact user already liked this exact post
+        existing_like = Like.objects.filter(user=request.user, post_id=post_id)
+        
+        if existing_like.exists():
+            # UNLIKE: If the like exists, delete it and tell the frontend we succeeded
+            existing_like.delete()
+            return Response({"message": "Unliked successfully"}, status=status.HTTP_200_OK)
+        else:
+            # LIKE: If it doesn't exist, proceed with normal creation
+            return super().create(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+#RegisterView is a generic view that allows new users to register. It uses the RegisterSerializer to validate and create new user instances. The permission_classes = [AllowAny] line means that anyone (even unauthenticated users) can access this endpoint to register.
+class RegisterView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    permission_classes = [AllowAny]
+    # We will import this from your serializers file next
+    serializer_class = RegisterSerializer
 
